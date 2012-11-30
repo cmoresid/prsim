@@ -1,2 +1,5 @@
 *.o
 prsim
+mem*
+mrgen
+prsim_ta

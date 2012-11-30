@@ -203,6 +203,10 @@ inline int pt_page_exists(page_table* pt, uint32_t pagenum) {
 	return ( ht_search(pt->pt_ht, pagenum) != NULL ) ? 1 : 0; 
 }
 
+inline node* pt_get_pte(page_table* pt, uint32_t pagenum) {
+	return ht_search(pt->pt_ht, pagenum);
+}
+
 void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 	node* pte;
 	
@@ -216,7 +220,7 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 		if (pt->free_frames->size > 0) {
 			// Set frame number
 			pte->data &= 0xC0000000; 
-			pte->data |= llist_dequeue(pt->free_frames);
+			pte->data |= llist_dequeue(pt->free_frames)->key;
 			
 			if (IS_WRITE_REF(memref)) {
 				TOGGLE_PTE_DIRTY(pte->data);
@@ -224,7 +228,6 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 			
 			pt->add_page_mem_policy(pt, pte->key);
 		} else {
-			printf("Replace page.\n");
 			pt->replacement_policy(pt, pte->key);
 		}
 		

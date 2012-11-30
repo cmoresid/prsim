@@ -12,6 +12,7 @@ typedef struct node {
 
 typedef struct linked_list {
 	node* head;
+	node* tail;
 	int size;
 } linked_list;
 
@@ -26,7 +27,7 @@ void llist_delete(linked_list* list, node* item);
 void llist_delete2(linked_list* list, uint32_t key);
 node* llist_search(linked_list* list, uint32_t key);
 
-uint32_t llist_dequeue(linked_list* list);
+node* llist_dequeue(linked_list* list);
 node* llist_enqueue(linked_list* list, uint32_t key, uint32_t data);
 
 hash_table* ht_new(int size);

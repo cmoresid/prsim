@@ -9,6 +9,7 @@ linked_list* llist_new() {
 	}
 	
 	new_list->head = NULL;
+	new_list->tail = NULL;
 	new_list->size = 0;
 	
 	return new_list;
@@ -49,16 +50,37 @@ void llist_delete(linked_list* list, node* item) {
 	list->size--;
 }
 
-uint32_t llist_dequeue(linked_list* list) {
-	uint32_t data = list->head->data;
-	llist_delete(list, list->head);
+node* llist_dequeue(linked_list* list) {
+	node* tmp;
 	
-	return data;
+	if (list->head->next != NULL)
+		list->head->next->prev = list->head->prev;
+
+	tmp = list->head;
+	list->head = list->head->next;
+	
+	tmp->prev = NULL;
+	tmp->next = NULL;
+	
+	return tmp;
 }
 
 // Fix this with tail pointer!! Not acceptable
-void llist_enqueue(linked_list* list, uint32_t key, uint32_t data) {
-
+node* llist_enqueue(linked_list* list, uint32_t key, uint32_t data) {
+	node* new_node = (node*) malloc(sizeof(node));
+	new_node->key = key;
+	new_node->data = data;
+	
+	if (new_node == NULL)
+		return NULL;
+	
+	new_node->prev = list->tail;
+	if (list->tail != NULL)
+		list->tail->next = new_node;
+	
+	list->tail = new_node;
+	
+	return new_node;
 }
 
 void llist_delete2(linked_list* list, uint32_t key) {

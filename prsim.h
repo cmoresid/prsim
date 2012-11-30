@@ -67,6 +67,7 @@ void create_address_masks(int pagesize, int memsize);
 page_table* pt_new(int pagetable_size, int totalframes, add_page_mem_policy add_func, replacement_policy replace_func);
 inline int pt_page_exists(page_table* pt, uint32_t pagenum);
 void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum);
+inline node* pt_get_pte(page_table* pt, uint32_t pagenum);
 
 #endif // PRSIM_H
 

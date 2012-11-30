@@ -1,9 +1,9 @@
-CC		 = gcc
-SOURCES  = prsim.c
+CC	 = gcc
+SOURCES  = dstruct.c policies.c prsim.c
 OBJECTS  = $(SOURCES:.c=.o)
 TARGET   = prsim 
 CFLAGS   = -g -c -Wall
-LDFLAGS	 = -lpthread
+LDFLAGS	 = -lm
 
 all: $(SOURCES) $(TARGET)
 

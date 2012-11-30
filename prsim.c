@@ -21,8 +21,18 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <math.h>
 
 #include "prsim.h"
+#include "policies.h"
+#include "dstruct.h"
+
+uint32_t offset_mask;
+uint32_t pagenum_mask;
+int totalframes = 0;
+int pagefaults = 0;
+int flushes = 0;
 
 int main(int argc, char* argv[]) {
 	/* Contains the raw string from getopt */
@@ -105,6 +115,12 @@ int main(int argc, char* argv[]) {
 	}
 	memsize = new_memsize;
 	
+	// Create bit masks
+	create_address_masks(pagesize, memsize);
+	
+	// Set total number of physical frames
+	totalframes = memsize / pagesize;
+	
 	// Now start simulation!
 	return start_simulation(strategy, pagesize, memsize);
 }
@@ -113,8 +129,106 @@ void print_usage() {
 	fprintf(stderr, "Usage: prsim -s strategy -p pagesize -m memsize\n");
 }
 
+// Counting from left to right
+// bit 1, bit 2, bit 3, etc...
+uint32_t create_bitmask(uint32_t firstbit, uint32_t lastbit) {
+	uint32_t r = 0;
+	uint32_t i;
+	
+	for (i = 32-firstbit; i >= (32-lastbit); i--) {
+		r |= 1 << i;
+		if (i == 0)
+			break;
+	}
+	
+	return r;
+}
+
+void create_address_masks(int pagesize, int memsize) {
+	uint32_t offsetbits = log2(pagesize);
+	uint32_t pagenumbits = ADDRESS_WIDTH - offsetbits;
+	
+	pagenum_mask = create_bitmask(1, pagenumbits);
+	offset_mask = create_bitmask(pagenumbits+1, ADDRESS_WIDTH);
+}
+
 int start_simulation(char strategy, int pagesize, int memsize) {
 	printf("Starting simulation!\n");
+	uint32_t buff[1];
+	uint32_t pagenum;
+	page_table* pt;
+	
+	printf("Number of Physical Frames: %d\n", totalframes);
+	printf("Page # Mask: 0x%x\n", pagenum_mask);
+	
+	switch (strategy) {
+		case 'f':
+			pt = pt_new(10, totalframes, fifo_add_page_mem_policy, fifo_replacement_policy);
+			break;
+		case 'r':
+			pt = pt_new(10, totalframes, random_add_page_mem_policy, random_replacement_policy);
+			break;
+		case 'l':
+			pt = pt_new(10, totalframes, lru_add_page_mem_policy, lru_replacement_policy);
+			break;
+	}
+	
+	while (read(0, &buff, sizeof(uint32_t)) != 0) {
+		pagenum = pagenum_mask & buff[0];
+		pt_load_page(pt, buff[0], pagenum);
+	}
+	
+	printf("Page faults: %d\n", pagefaults);
 	
 	return 0;
 }
+
+page_table* pt_new(int pagetable_size, int totalframes, add_page_mem_policy add_func, replacement_policy replace_func) {
+	page_table* new_pagetable;
+	uint32_t i;
+	
+	new_pagetable = (page_table*) malloc(sizeof(page_table));
+	new_pagetable->add_page_mem_policy = add_func;
+	new_pagetable->replacement_policy = replace_func;
+	new_pagetable->pt_ht = ht_new(pagetable_size);
+	new_pagetable->inmem_pages = llist_new();
+	new_pagetable->free_frames = llist_new();
+	for (i = 0; i < totalframes; i++)
+		llist_insert(new_pagetable->free_frames, i, i);
+		
+	return new_pagetable;
+}
+
+inline int pt_page_exists(page_table* pt, uint32_t pagenum) {
+	return ( ht_search(pt->pt_ht, pagenum) != NULL ) ? 1 : 0; 
+}
+
+void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
+	node* pte;
+	
+	if (!(pt_page_exists(pt, pagenum))) {
+		pte = ht_insert(pt->pt_ht, pagenum, 0);
+	}
+	
+	if (!IS_PTE_VALID(pte->data)) {
+		pagefaults++;
+		
+		if (pt->free_frames->size > 0) {
+			// Set frame number
+			pte->data &= 0xC0000000; 
+			pte->data |= llist_dequeue(pt->free_frames);
+			
+			if (IS_WRITE_REF(memref)) {
+				TOGGLE_PTE_DIRTY(pte->data);
+			}
+			
+			pt->add_page_mem_policy(pt, pte->key);
+		} else {
+			printf("Replace page.\n");
+			pt->replacement_policy(pt, pte->key);
+		}
+		
+		TOGGLE_PTE_VALID(pte->data);
+	}
+}
+

@@ -2,14 +2,14 @@ CC	 = gcc
 SOURCES  = dstruct.c policies.c prsim.c
 OBJECTS  = $(SOURCES:.c=.o)
 TARGET   = prsim
-CFLAGS   = -g -c -Wall
+CFLAGS   = -c -Wall -O3
 LDFLAGS	 = -lm
 
 all: $(SOURCES) $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) main.c -o main.o
-	$(CC) $(OBJECTS) main.o $(LDFLAGS) -o $@
+	$(CC) -O3 $(OBJECTS) main.o $(LDFLAGS) -o $@
 
 tests: $(OBJECTS)
 	$(CC) $(CFLAGS) prsim_tests.c -o prsim_tests.o

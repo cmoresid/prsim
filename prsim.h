@@ -35,12 +35,12 @@ typedef struct page_table {
 	linked_list* free_frames;
 	linked_list* inmem_pages;
 	hash_table* pt_ht;
-	void (*add_page_mem_policy)(struct page_table* pt, uint32_t pagenum);
-	void (*replacement_policy) (struct page_table* pt, uint32_t pagenum);
+	void (*add_page_mem_policy)(struct page_table* pt, node* pte);
+	void (*replacement_policy) (struct page_table* pt, node* pte);
 } page_table;
 
-typedef void (*add_page_mem_policy)(page_table* pt, uint32_t pagenum);
-typedef void (*replacement_policy) (page_table* pt, uint32_t pagenum);
+typedef void (*add_page_mem_policy)(page_table* pt, node* pte);
+typedef void (*replacement_policy) (page_table* pt, node* pte);
 
 /* 
  * ===  FUNCTION  ======================================================================

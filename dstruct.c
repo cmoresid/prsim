@@ -26,13 +26,18 @@ node* llist_insert(linked_list* list, uint32_t key, uint32_t data) {
 	new_node->next = list->head;
 	if (list->head != NULL)
 		list->head->prev = new_node;
-		
+	
 	list->head = new_node;
+	
+	if (list->tail == NULL)
+		list->tail = list->head;
+	
 	list->size++;
 	
 	return new_node;
 }
 
+// Fix for tail
 void llist_delete(linked_list* list, node* item) {
 	if (item->prev != NULL)
 		item->prev->next = item->next;
@@ -59,13 +64,17 @@ node* llist_dequeue(linked_list* list) {
 	tmp = list->head;
 	list->head = list->head->next;
 	
+	if (list->head == NULL || list->head->next == NULL)
+		list->tail = list->head;
+	
 	tmp->prev = NULL;
 	tmp->next = NULL;
+	
+	list->size--;
 	
 	return tmp;
 }
 
-// Fix this with tail pointer!! Not acceptable
 node* llist_enqueue(linked_list* list, uint32_t key, uint32_t data) {
 	node* new_node = (node*) malloc(sizeof(node));
 	new_node->key = key;
@@ -74,11 +83,20 @@ node* llist_enqueue(linked_list* list, uint32_t key, uint32_t data) {
 	if (new_node == NULL)
 		return NULL;
 	
-	new_node->prev = list->tail;
-	if (list->tail != NULL)
+	if (list->head == NULL) {
+		list->head = new_node;
+		list->tail = list->head;
+	} else if (list->head == list->tail) {
+		list->head->next = new_node;
+		new_node->prev = list->head;
+		list->tail = list->head->next;
+	} else {
 		list->tail->next = new_node;
+		new_node->prev = list->tail;
+		list->tail = new_node;
+	}
 	
-	list->tail = new_node;
+	list->size++;
 	
 	return new_node;
 }
@@ -100,6 +118,7 @@ node* llist_search(linked_list* list, uint32_t key) {
 	while (p != NULL) {
 		if (p->key == key)
 			return p;
+		p = p->next;
 	}
 	
 	return NULL;

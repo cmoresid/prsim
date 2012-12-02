@@ -31,6 +31,8 @@
 uint32_t offset_mask;
 uint32_t pagenum_mask;
 int totalframes = 0;
+
+int memrefs = 0;
 int pagefaults = 0;
 int flushes = 0;
 
@@ -153,32 +155,35 @@ void create_address_masks(int pagesize, int memsize) {
 }
 
 int start_simulation(char strategy, int pagesize, int memsize) {
-	printf("Starting simulation!\n");
 	uint32_t buff[1];
 	uint32_t pagenum;
 	page_table* pt;
 	
-	printf("Number of Physical Frames: %d\n", totalframes);
-	printf("Page # Mask: 0x%x\n", pagenum_mask);
-	
 	switch (strategy) {
 		case 'f':
-			pt = pt_new(10, totalframes, fifo_add_page_mem_policy, fifo_replacement_policy);
+			pt = pt_new(32, totalframes, fifo_add_page_mem_policy, fifo_replacement_policy);
 			break;
 		case 'r':
-			pt = pt_new(10, totalframes, random_add_page_mem_policy, random_replacement_policy);
+			pt = pt_new(32, totalframes, random_add_page_mem_policy, random_replacement_policy);
 			break;
 		case 'l':
-			pt = pt_new(10, totalframes, lru_add_page_mem_policy, lru_replacement_policy);
+			pt = pt_new(32, totalframes, lru_add_page_mem_policy, lru_replacement_policy);
 			break;
 	}
 	
 	while (read(0, &buff, sizeof(uint32_t)) != 0) {
 		pagenum = pagenum_mask & buff[0];
 		pt_load_page(pt, buff[0], pagenum);
+		memrefs++;
 	}
 	
-	printf("Page faults: %d\n", pagefaults);
+	printf("\n********************\n");
+	printf("*      PRSIM      *\n");
+	printf("********************\n");
+	printf("(physical memory set to %d frames @ %d bytes = %d)\n", totalframes, pagesize, memsize);
+	printf("References  : %d\n", memrefs);
+	printf("Page faults : %d\n", pagefaults);
+	printf("Flushes     : %d\n\n", flushes);
 	
 	return 0;
 }
@@ -199,10 +204,6 @@ page_table* pt_new(int pagetable_size, int totalframes, add_page_mem_policy add_
 	return new_pagetable;
 }
 
-inline int pt_page_exists(page_table* pt, uint32_t pagenum) {
-	return ( ht_search(pt->pt_ht, pagenum) != NULL ) ? 1 : 0; 
-}
-
 inline node* pt_get_pte(page_table* pt, uint32_t pagenum) {
 	return ht_search(pt->pt_ht, pagenum);
 }
@@ -210,28 +211,26 @@ inline node* pt_get_pte(page_table* pt, uint32_t pagenum) {
 void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 	node* pte;
 	
-	if (!(pt_page_exists(pt, pagenum))) {
+	if ( (pte = pt_get_pte(pt, pagenum)) == NULL ) {
 		pte = ht_insert(pt->pt_ht, pagenum, 0);
 	}
 	
 	if (!IS_PTE_VALID(pte->data)) {
 		pagefaults++;
 		
+		if (IS_WRITE_REF(memref)) {
+			TOGGLE_PTE_DIRTY(pte->data);
+		}
+		
 		if (pt->free_frames->size > 0) {
-			// Set frame number
-			pte->data &= 0xC0000000; 
-			pte->data |= llist_dequeue(pt->free_frames)->key;
-			
-			if (IS_WRITE_REF(memref)) {
-				TOGGLE_PTE_DIRTY(pte->data);
-			}
-			
-			pt->add_page_mem_policy(pt, pte->key);
+			pt->add_page_mem_policy(pt, pte);
 		} else {
-			pt->replacement_policy(pt, pte->key);
+			pt->replacement_policy(pt, pte);
 		}
 		
 		TOGGLE_PTE_VALID(pte->data);
+	} else {
+		// if page replacement policy is LRU, do something
 	}
 }
 

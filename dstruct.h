@@ -23,8 +23,8 @@ typedef struct hash_table {
 
 linked_list* llist_new();
 node* llist_insert(linked_list* list, uint32_t key, uint32_t data);
-void llist_delete(linked_list* list, node* item);
-void llist_delete2(linked_list* list, uint32_t key);
+node* llist_remove(linked_list* list, node* item);
+node* llist_remove2(linked_list* list, uint32_t key);
 node* llist_search(linked_list* list, uint32_t key);
 
 node* llist_dequeue(linked_list* list);

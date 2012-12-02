@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <time.h>
 
 #include "prsim.h"
 #include "policies.h"
@@ -65,6 +66,7 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 			pt = pt_new(pt_size, totalframes, fifo_add_page_mem_policy, fifo_replacement_policy);
 			break;
 		case 'r':
+			srand(time(NULL));
 			pt = pt_new(pt_size, totalframes, random_add_page_mem_policy, random_replacement_policy);
 			break;
 		case 'l':

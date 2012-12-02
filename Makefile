@@ -14,7 +14,7 @@ $(TARGET): $(OBJECTS)
 tests: $(OBJECTS)
 	$(CC) $(CFLAGS) prsim_tests.c -o prsim_tests.o
 	$(CC) $(OBJECTS) prsim_tests.o $(LDFLAGS) -o prsim_tests
-	-$(TEST)
+	-./prsim_tests
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@

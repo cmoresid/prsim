@@ -6,6 +6,7 @@
 typedef struct node {
 	uint32_t key;
 	uint32_t data;
+	struct node* pte;
 	struct node* next;
 	struct node* prev;
 } node;
@@ -24,12 +25,13 @@ typedef struct hash_table {
 linked_list* llist_new();
 node* llist_insert(linked_list* list, uint32_t key, uint32_t data);
 void  llist_insert2(linked_list* list, node* new_node);
+node* llist_insert_pte_ref(linked_list* list, node* pte);
 node* llist_remove(linked_list* list, node* item);
 node* llist_remove2(linked_list* list, uint32_t key);
 node* llist_search(linked_list* list, uint32_t key); 
 
 node* llist_dequeue(linked_list* list);
-node* llist_enqueue(linked_list* list, uint32_t key, uint32_t data);
+node* llist_enqueue_pte_ref(linked_list* list, node* pte);
 
 hash_table* ht_new(int size);
 node* ht_insert(hash_table* htable, uint32_t key, uint32_t data);

@@ -28,7 +28,7 @@
 #include "policies.h"
 #include "dstruct.h"
 
-const int pt_size = 128;
+const int pt_size = 512;
 
 int totalframes = 0;
 int memrefs = 0;
@@ -60,6 +60,9 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 	
 	// Set total number of physical frames
 	totalframes = memsize / pagesize;
+	
+	// Initialize mempool
+	//inmem_pages_pool = init_mempool(sizeof(node), totalframes);
 	
 	switch (strategy) {
 		case 'f':
@@ -103,16 +106,13 @@ void print_statistics(int pagesize, int memsize) {
 
 page_table* pt_new(int pagetable_size, int totalframes, add_page_mem_policy add_func, replacement_policy replace_func) {
 	page_table* new_pagetable;
-	uint32_t i;
 	
 	new_pagetable = (page_table*) malloc(sizeof(page_table));
 	new_pagetable->add_page_mem_policy = add_func;
 	new_pagetable->replacement_policy = replace_func;
 	new_pagetable->pt_ht = ht_new(pagetable_size);
 	new_pagetable->inmem_pages = llist_new();
-	new_pagetable->free_frames = llist_new();
-	for (i = 0; i < totalframes; i++)
-		llist_insert(new_pagetable->free_frames, i, i);
+	new_pagetable->freeframes = totalframes;
 		
 	return new_pagetable;
 }
@@ -135,7 +135,7 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 	if (!IS_PTE_VALID(pte->data)) {
 		pagefaults++;
 		
-		if (pt->free_frames->size > 0) {
+		if (pt->freeframes > 0) {
 			pt->add_page_mem_policy(pt, pte);
 		} else {
 			pt->replacement_policy(pt, pte);

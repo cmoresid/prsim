@@ -32,7 +32,7 @@
 #define SET_PTE_DIRTY(pte) ( pte |= ((uint32_t)(1 << ((ADDRESS_WIDTH)-2))) )
 
 typedef struct page_table {
-	linked_list* free_frames;
+	int freeframes;
 	linked_list* inmem_pages;
 	hash_table* pt_ht;
 	void (*add_page_mem_policy)(struct page_table* pt, node* pte);

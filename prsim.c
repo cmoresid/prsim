@@ -59,7 +59,10 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 	page_table* pt;
 	
 	// Set total number of physical frames
-	totalframes = memsize / pagesize;
+	if ( (totalframes = memsize / pagesize) == 1 ) {
+		printf("** Need at least 2 frames to be interesting.\n");
+		exit(1);
+	}
 	
 	// Initialize mempool
 	//inmem_pages_pool = init_mempool(sizeof(node), totalframes);
@@ -93,7 +96,7 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 	return 0;
 }
 
-void print_statistics(int pagesize, int memsize) {
+inline void print_statistics(int pagesize, int memsize) {
 	printf("\n********************\n");
 	printf("*      PRSIM       *\n");
 	printf("********************\n");
@@ -146,7 +149,7 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 		if (pt->replacement_policy == &lru_replacement_policy) {
 			linked_list *inmem_pages = pt->inmem_pages;
 			
-			node* mru_page = llist_search(inmem_pages, pte->key);
+			node* mru_page = llist_search(inmem_pages, pagenum);
 			if (mru_page != pt->inmem_pages->head) {
 				mru_page = llist_remove(inmem_pages, mru_page);
 				llist_insert2(inmem_pages, mru_page);

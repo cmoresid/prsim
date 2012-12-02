@@ -52,14 +52,10 @@ void llist_insert2(linked_list* list, node* new_node) {
 	list->size++;
 }
 
-node* llist_insert_pte_ref(linked_list* list, node* pte) {
-	node* new_node = (node*) malloc(sizeof(node));
+void llist_insert_pte_ref(linked_list* list, node* new_node, node* pte) {
 	new_node->key = pte->key;
-	new_node->data = pte->data;
+	new_node->data = 0;
 	new_node->pte = pte;
-	
-	if (new_node == NULL)
-		return NULL;
 	
 	new_node->next = list->head;
 	if (list->head != NULL)
@@ -71,8 +67,6 @@ node* llist_insert_pte_ref(linked_list* list, node* pte) {
 		list->tail = list->head;
 	
 	list->size++;
-	
-	return new_node;
 }
 
 node* llist_remove(linked_list* list, node* item) {
@@ -113,14 +107,10 @@ node* llist_dequeue(linked_list* list) {
 	return tmp;
 }
 
-node* llist_enqueue_pte_ref(linked_list* list, node* pte) {
-	node* new_node = (node*) malloc(sizeof(node));
+void llist_enqueue_pte_ref(linked_list* list, node* new_node, node* pte) {
 	new_node->key = pte->key;
-	new_node->data = pte->data;
+	new_node->data = 0;
 	new_node->pte = pte;
-	
-	if (new_node == NULL)
-		return NULL;
 	
 	if (list->head == NULL) {
 		list->head = new_node;
@@ -136,8 +126,6 @@ node* llist_enqueue_pte_ref(linked_list* list, node* pte) {
 	}
 	
 	list->size++;
-	
-	return new_node;
 }
 
 node* llist_remove2(linked_list* list, uint32_t key) {

@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
 #include <math.h>
 
@@ -28,108 +27,12 @@
 #include "policies.h"
 #include "dstruct.h"
 
-uint32_t offset_mask;
-uint32_t pagenum_mask;
-int totalframes = 0;
+const int pt_size = 32;
 
+int totalframes = 0;
 int memrefs = 0;
 int pagefaults = 0;
 int flushes = 0;
-
-int main(int argc, char* argv[]) {
-	/* Contains the raw string from getopt */
-	char* strategy_full = NULL;
-	/* After strategy_full sanitized, contains replacement policy */
-	char strategy = '0';
-	/* Size of the pages */
-	int pagesize = 0;
-	/* Size of the real memory */
-	int memsize = 0;
-	/* Scaled size of real memory, if needed */
-	int new_memsize = 0;
-	/* Used by getopt to store state */
-	int c;
-
-	// Make sure there are the proper # of arguments
-	if (argc != 7) {
-		print_usage();
-		exit(1);
-	}
-
-	// Parse parameters
-	opterr = 0;	
-	while ( (c = getopt(argc, argv, "s:p:m:h::")) != -1) {
-		switch (c) {
-			case 's':
-				strategy_full = optarg;
-				break;
-			case 'p':
-				pagesize = atoi(optarg);
-				break;
-			case 'm':
-				memsize = atoi(optarg);
-				break;
-			case 'h':
-				print_usage();
-				exit(0);
-				break;
-			case '?':
-				if (optopt == 's' || optopt == 'p' || optopt == 'm')
-					fprintf(stderr, "Option -%c requires an argument.\n", optopt);
-				else if (isprint(optopt))
-					fprintf(stderr, "Unknown option '-%c'.\n", optopt);
-				else
-					fprintf(stderr, "Unknown option character '\\x%x'.\n", optopt);
-			default:
-				print_usage();
-				exit(1);
-		}
-	}
-	
-	// Verify strategy parameter
-	if (strlen(strategy_full) > 1 || (strategy_full[0] != 'r' && strategy_full[0] != 'f' && strategy_full[0] != 'l')) {
-		fprintf(stderr, "Strategy must be either 'r', 'f', or 'l'\n");
-		exit(1);
-	} else {
-		strategy = strategy_full[0];
-	}
-	
-	// Verify page size parameter
-	if (pagesize < 32 || pagesize > 8192) {
-		fprintf(stderr, "Page size must be between 32 and 8192 bytes, inclusive\n");
-		exit(1);
-	}
-	if (!((pagesize & (~pagesize + 1)) == pagesize)) {
-		fprintf(stderr, "Page size must be a power of 2.\n");
-		exit(1);
-	}
-	
-	// Verify memory size parameter
-	if (memsize <= 0) {
-		fprintf(stderr, "Memory size must be greater than zero.\n");
-		exit(1);
-	}
-	
-	// Round memory size up to nearest multiple of page size if necessary
-	new_memsize = PAGE_ROUND_UP(pagesize, memsize);
-	if (new_memsize != memsize) {
-		printf("Note: Memory size scaled to %d bytes.\n", new_memsize);
-	}
-	memsize = new_memsize;
-	
-	// Create bit masks
-	create_address_masks(pagesize, memsize);
-	
-	// Set total number of physical frames
-	totalframes = memsize / pagesize;
-	
-	// Now start simulation!
-	return start_simulation(strategy, pagesize, memsize);
-}
-
-void print_usage() {
-	fprintf(stderr, "Usage: prsim -s strategy -p pagesize -m memsize\n");
-}
 
 // Counting from left to right
 // bit 1, bit 2, bit 3, etc...
@@ -146,30 +49,32 @@ uint32_t create_bitmask(uint32_t firstbit, uint32_t lastbit) {
 	return r;
 }
 
-void create_address_masks(int pagesize, int memsize) {
-	uint32_t offsetbits = log2(pagesize);
-	uint32_t pagenumbits = ADDRESS_WIDTH - offsetbits;
-	
-	pagenum_mask = create_bitmask(1, pagenumbits);
-	offset_mask = create_bitmask(pagenumbits+1, ADDRESS_WIDTH);
-}
-
 int start_simulation(char strategy, int pagesize, int memsize) {
 	uint32_t buff[1];
 	uint32_t pagenum;
+	uint32_t offsetbits;
+	uint32_t pagenumbits;
+	uint32_t pagenum_mask;
 	page_table* pt;
+	
+	// Set total number of physical frames
+	totalframes = memsize / pagesize;
 	
 	switch (strategy) {
 		case 'f':
-			pt = pt_new(32, totalframes, fifo_add_page_mem_policy, fifo_replacement_policy);
+			pt = pt_new(pt_size, totalframes, fifo_add_page_mem_policy, fifo_replacement_policy);
 			break;
 		case 'r':
-			pt = pt_new(32, totalframes, random_add_page_mem_policy, random_replacement_policy);
+			pt = pt_new(pt_size, totalframes, random_add_page_mem_policy, random_replacement_policy);
 			break;
 		case 'l':
-			pt = pt_new(32, totalframes, lru_add_page_mem_policy, lru_replacement_policy);
+			pt = pt_new(pt_size, totalframes, lru_add_page_mem_policy, lru_replacement_policy);
 			break;
 	}
+	
+	offsetbits = log2(pagesize);
+	pagenumbits = ADDRESS_WIDTH - offsetbits;
+	pagenum_mask = create_bitmask(1, pagenumbits);
 	
 	while (read(0, &buff, sizeof(uint32_t)) != 0) {
 		pagenum = pagenum_mask & buff[0];
@@ -177,15 +82,21 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 		memrefs++;
 	}
 	
+	// Done, now print statistics
+	print_statistics(pagesize, memsize);
+	
+	return 0;
+}
+
+void print_statistics(int pagesize, int memsize) {
 	printf("\n********************\n");
-	printf("*      PRSIM      *\n");
+	printf("*      PRSIM       *\n");
 	printf("********************\n");
-	printf("(physical memory set to %d frames @ %d bytes = %d)\n", totalframes, pagesize, memsize);
+	printf("(physical memory set to %d frames @ %d bytes = %d bytes)\n", 
+		totalframes, pagesize, memsize);
 	printf("References  : %d\n", memrefs);
 	printf("Page faults : %d\n", pagefaults);
 	printf("Flushes     : %d\n\n", flushes);
-	
-	return 0;
 }
 
 page_table* pt_new(int pagetable_size, int totalframes, add_page_mem_policy add_func, replacement_policy replace_func) {
@@ -215,12 +126,12 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 		pte = ht_insert(pt->pt_ht, pagenum, 0);
 	}
 	
+	if (IS_WRITE_REF(memref)) {
+		SET_PTE_DIRTY(pte->data);
+	}
+	
 	if (!IS_PTE_VALID(pte->data)) {
 		pagefaults++;
-		
-		if (IS_WRITE_REF(memref)) {
-			TOGGLE_PTE_DIRTY(pte->data);
-		}
 		
 		if (pt->free_frames->size > 0) {
 			pt->add_page_mem_policy(pt, pte);
@@ -228,9 +139,11 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 			pt->replacement_policy(pt, pte);
 		}
 		
-		TOGGLE_PTE_VALID(pte->data);
+		SET_PTE_VALID(pte->data);
 	} else {
-		// if page replacement policy is LRU, do something
+		if (pt->replacement_policy == &lru_replacement_policy) {
+			// update_lru
+		}
 	}
 }
 

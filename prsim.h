@@ -28,8 +28,8 @@
 #define IS_PTE_DIRTY(pte) ( ((uint32_t)(1 << ((ADDRESS_WIDTH)-2))) & pte )
 #define IS_WRITE_REF(ref) ( ((uint32_t)1) & ref )
 
-#define TOGGLE_PTE_VALID(pte) ( pte ^= ((uint32_t)(1 << ((ADDRESS_WIDTH)-1))) )
-#define TOGGLE_PTE_DIRTY(pte) ( pte ^= ((uint32_t)(1 << ((ADDRESS_WIDTH)-2))) )
+#define SET_PTE_VALID(pte) ( pte |= ((uint32_t)(1 << ((ADDRESS_WIDTH)-1))) )
+#define SET_PTE_DIRTY(pte) ( pte |= ((uint32_t)(1 << ((ADDRESS_WIDTH)-2))) )
 
 typedef struct page_table {
 	linked_list* free_frames;
@@ -64,6 +64,7 @@ int start_simulation(char strategy, int pagesize, int memsize);
 
 void create_address_masks(int pagesize, int memsize);
 
+inline void print_statistics(int pagesize, int memsize);
 page_table* pt_new(int pagetable_size, int totalframes, add_page_mem_policy add_func, replacement_policy replace_func);
 inline int pt_page_exists(page_table* pt, uint32_t pagenum);
 void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum);

@@ -6,11 +6,10 @@ extern int pagefaults;
 extern int flushes;
 
 void fifo_add_page_mem_policy(page_table* pt, node* pte) {
-	node* p = llist_dequeue(pt->free_frames);
+	node* free_frame = llist_dequeue(pt->free_frames);
 	
-	pte->data &= 0xC0000000; 
-	pte->data |= p->key;
-	free(p);
+	pte->data = ((pte->data & 0xC0000000) | (0x3FFFFFFF & free_frame->data));
+	free(free_frame);
 	
 	llist_enqueue(pt->inmem_pages, pte->key, pte->data);
 }
@@ -31,8 +30,7 @@ void fifo_replacement_policy(page_table* pt, node* pte) {
 	
 	// Now place pte in the frame where discarded_page_pte
 	// was
-	pte->data &= 0xC0000000; 
-	pte->data |= (0x3FFFFFFF & discarded_page_pte->data);
+	pte->data &= ((pte->data & 0xC0000000) | (0x3FFFFFFF & discarded_page_pte->data));
 	llist_enqueue(pt->inmem_pages, pte->key, pte->data);
 	
 	// It is not valid now, discard it

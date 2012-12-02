@@ -22,6 +22,8 @@
 #include "dstruct.h"
 
 #define ADDRESS_WIDTH 32
+#define SIZE 128
+
 #define PAGE_ROUND_UP(pagesize,x) ( (((int)(x)) + pagesize-1)  & (~(pagesize-1)) )
 
 #define IS_PTE_VALID(pte) ( ((uint32_t)(1 << ((ADDRESS_WIDTH)-1))) & pte )

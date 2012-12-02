@@ -28,7 +28,7 @@
 #include "policies.h"
 #include "dstruct.h"
 
-const int pt_size = 512;
+const int pt_size = 256;
 
 int totalframes = 0;
 int memrefs = 0;
@@ -51,8 +51,9 @@ uint32_t create_bitmask(uint32_t firstbit, uint32_t lastbit) {
 }
 
 int start_simulation(char strategy, int pagesize, int memsize) {
-	uint32_t buff[1];
-	uint32_t pagenum;
+	uint32_t buff[SIZE];
+	size_t n;
+	int i;
 	uint32_t offsetbits;
 	uint32_t pagenumbits;
 	uint32_t pagenum_mask;
@@ -63,9 +64,6 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 		printf("** Need at least 2 frames to be interesting.\n");
 		exit(1);
 	}
-	
-	// Initialize mempool
-	//inmem_pages_pool = init_mempool(sizeof(node), totalframes);
 	
 	switch (strategy) {
 		case 'f':
@@ -84,10 +82,18 @@ int start_simulation(char strategy, int pagesize, int memsize) {
 	pagenumbits = ADDRESS_WIDTH - offsetbits;
 	pagenum_mask = create_bitmask(1, pagenumbits);
 	
-	while (read(0, &buff, sizeof(uint32_t)) != 0) {
-		pagenum = pagenum_mask & buff[0];
-		pt_load_page(pt, buff[0], pagenum);
-		memrefs++;
+	while ( (n = read(0, &buff, sizeof(buff))) == sizeof(buff) ) {
+		for (i = 0; i < (n/sizeof(uint32_t)); i++) {
+			pt_load_page(pt, buff[i], pagenum_mask & buff[i]);
+			memrefs++;
+		}
+	}
+	
+	if (n < sizeof(buff)) {
+		for (i = 0; i < (n/sizeof(uint32_t)); i++) {
+			pt_load_page(pt, buff[i], pagenum_mask & buff[i]);
+			memrefs++;
+		}
 	}
 	
 	// Done, now print statistics

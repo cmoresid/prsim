@@ -1,13 +1,10 @@
 #include <stdlib.h>
 
 #include "policies.h"
-#include "mempool.h"
 
 extern int pagefaults;
 extern int flushes;
 extern int totalframes;
-
-extern mempool* inmem_pages_node_pool;
 
 void fifo_add_page_mem_policy(page_table* pt, node* pte) {
 	pt->freeframes--;

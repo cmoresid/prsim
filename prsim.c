@@ -28,7 +28,7 @@
 #include "policies.h"
 #include "dstruct.h"
 
-const int pt_size = 256;
+const int pt_size = 0x40000000;
 
 int totalframes = 0;
 int memrefs = 0;

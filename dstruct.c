@@ -37,7 +37,20 @@ node* llist_insert(linked_list* list, uint32_t key, uint32_t data) {
 	return new_node;
 }
 
-// Fix for tail
+void llist_insert2(linked_list* list, node* new_node) {
+	new_node->next = list->head;
+	
+	if (list->head != NULL)
+		list->head->prev = new_node;
+	
+	list->head = new_node;
+	
+	if (list->tail == NULL)
+		list->tail = list->head;
+	
+	list->size++;
+}
+
 node* llist_remove(linked_list* list, node* item) {
 	if (item->prev != NULL)
 		item->prev->next = item->next;

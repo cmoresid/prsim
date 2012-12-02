@@ -37,7 +37,6 @@ void fifo_replacement_policy(page_table* pt, node* pte) {
 	// It is not valid now, discard it
 	discarded_page_pte->data = 0;
 	free(discarded_page);
-	discarded_page = NULL;
 }
 
 void random_add_page_mem_policy(page_table* pt, node* pte) {
@@ -75,15 +74,35 @@ void random_replacement_policy(page_table* pt, node* pte) {
 	// It is not valid now, discard it
 	discarded_page_pte->data = 0;
 	free(discarded_page);
-	discarded_page = NULL;
 }
 
 void lru_add_page_mem_policy(page_table* pt, node* pte) {
-
+	node* free_frame = llist_dequeue(pt->free_frames);
+	
+	pte->data = ((pte->data & 0xC0000000) | (0x3FFFFFFF & free_frame->data));
+	free(free_frame);
+	
+	llist_insert(pt->inmem_pages, pte->key, pte->data);
 }
 
 void lru_replacement_policy(page_table* pt, node* pte) {
-
+	node* discarded_page_pte;
+	node* discarded_page;
+	
+	discarded_page = llist_remove(pt->inmem_pages, pt->inmem_pages->tail);
+	discarded_page_pte = pt_get_pte(pt, discarded_page->key);
+	
+	if (IS_PTE_DIRTY(discarded_page_pte->data)) {
+		flushes++;
+	}
+	
+	// Now place pte in the frame where discarded_page_pte
+	// was
+	pte->data &= ((pte->data & 0xC0000000) | (0x3FFFFFFF & discarded_page_pte->data));
+	llist_insert(pt->inmem_pages, pte->key, pte->data);
+	
+	discarded_page_pte->data = 0;
+	free(discarded_page);
 }
 
 

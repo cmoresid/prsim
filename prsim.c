@@ -144,7 +144,13 @@ void pt_load_page(page_table* pt, uint32_t memref, uint32_t pagenum) {
 		SET_PTE_VALID(pte->data);
 	} else {
 		if (pt->replacement_policy == &lru_replacement_policy) {
-			// update_lru
+			linked_list *inmem_pages = pt->inmem_pages;
+			
+			node* mru_page = llist_search(inmem_pages, pte->key);
+			if (mru_page != pt->inmem_pages->head) {
+				mru_page = llist_remove(inmem_pages, mru_page);
+				llist_insert2(inmem_pages, mru_page);
+			}
 		}
 	}
 }
